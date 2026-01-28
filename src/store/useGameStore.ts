@@ -34,6 +34,12 @@ interface GameState {
     // UI State
     hasSeenIntro: boolean;
 
+    // Advanced Systems
+    specialization: 'none' | 'frontend' | 'backend' | 'devops';
+    officeLevel: number;
+    darkWebUnlocked: boolean;
+    illegalAIActive: boolean;
+
     // Actions
     addCode: (amount: number, fromClick?: boolean) => void;
     buyBuilding: (buildingId: string) => void;
@@ -44,6 +50,11 @@ interface GameState {
     checkAchievements: () => void;
     prestige: () => void;
     resetGame: () => void;
+
+    // Advanced Actions
+    setSpecialization: (spec: 'frontend' | 'backend' | 'devops') => void;
+    upgradeOffice: () => void;
+    toggleIllegalAI: (active: boolean) => void;
 
     // Contract Actions
     acceptContract: (contractId: string) => void;
@@ -71,6 +82,10 @@ export const useGameStore = create<GameState>()(
             contractProgress: 0,
             contractsCompleted: [],
             hasSeenIntro: false,
+            specialization: 'none',
+            officeLevel: 0,
+            darkWebUnlocked: false,
+            illegalAIActive: false,
             lastSaveTime: Date.now(),
 
             startTime: Date.now(),
@@ -79,6 +94,29 @@ export const useGameStore = create<GameState>()(
 
             // UI Actions
             setHasSeenIntro: (seen) => set({ hasSeenIntro: seen }),
+
+            // Advanced Actions
+            setSpecialization: (spec) => {
+                set({ specialization: spec });
+                get().recalculateCPS(get().buildings, get().upgrades);
+            },
+
+            upgradeOffice: () => {
+                const state = get();
+                const costs = [50000, 500000, 5000000];
+                const currentCost = costs[state.officeLevel];
+
+                if (state.officeLevel < 3 && state.linesOfCode >= currentCost) {
+                    set(s => ({
+                        linesOfCode: s.linesOfCode - currentCost,
+                        officeLevel: s.officeLevel + 1
+                    }));
+                }
+            },
+
+            toggleIllegalAI: (active) => {
+                set({ illegalAIActive: active });
+            },
 
 
             addCode: (amount, fromClick = false) => {
@@ -93,6 +131,9 @@ export const useGameStore = create<GameState>()(
 
                     // Calculate burnout increase based on Chairs
                     let burnoutIncrease = 2; // Base increase per type
+
+                    // DevOps Specialization: -50% stress
+                    if (state.specialization === 'devops') burnoutIncrease *= 0.5;
 
                     // Apply Chair reduction
                     state.hardware.forEach(hId => {
@@ -112,11 +153,29 @@ export const useGameStore = create<GameState>()(
                     }
                 }
 
+                // Dark Web Check: Unlock at 10k LOC
+                const shouldUnlockDarkWeb = !state.darkWebUnlocked && state.totalLinesOfCode >= 10000;
+
+                // Illegal AI Hack Check
+                if (state.illegalAIActive && !fromClick && Math.random() < 0.005) { // 0.5% chance per tick to get hacked
+                    set({
+                        linesOfCode: 0,
+                        illegalAIActive: false
+                    });
+                    // You could add a notification here later
+                }
+
                 set((state) => {
-                    const newLines = state.linesOfCode + amount;
-                    const newTotalLines = (state.totalLinesOfCode || 0) + amount;
+                    let clickAmount = amount;
+                    // Frontend Ninja: Double Click Power
+                    if (fromClick && state.specialization === 'frontend') {
+                        clickAmount *= 2;
+                    }
+
+                    const newLines = state.linesOfCode + clickAmount;
+                    const newTotalLines = (state.totalLinesOfCode || 0) + clickAmount;
                     const newContractProgress = state.activeContractId
-                        ? state.contractProgress + amount
+                        ? state.contractProgress + clickAmount
                         : state.contractProgress;
 
                     return {
@@ -126,7 +185,8 @@ export const useGameStore = create<GameState>()(
                         lastSaveTime: Date.now(),
                         burnout: currentBurnout,
                         isBurnout: isNowBurnout,
-                        contractProgress: newContractProgress
+                        contractProgress: newContractProgress,
+                        darkWebUnlocked: state.darkWebUnlocked || shouldUnlockDarkWeb
                     };
                 });
                 get().checkAchievements();
@@ -145,6 +205,11 @@ export const useGameStore = create<GameState>()(
 
                 const count = state.buildings[buildingId] || 0;
                 const cost = Math.floor(building.baseCost * Math.pow(1.15, count));
+
+                // Office Slot Limits
+                const totalPersonnel = Object.values(state.buildings).reduce((a, b) => a + b, 0);
+                const limits = [20, 50, 150, Infinity];
+                if (totalPersonnel >= limits[state.officeLevel]) return; // Office is full!
 
                 if (state.linesOfCode >= cost) {
                     const newCount = count + 1;
@@ -293,6 +358,16 @@ export const useGameStore = create<GameState>()(
                 // Apply Prestige Multiplier (+10% per share)
                 const prestigeMultiplier = 1 + ((state.shares || 0) * 0.1);
                 newCPS *= globalMultiplier * prestigeMultiplier;
+
+                // Backend Architect: +50% CPS
+                if (state.specialization === 'backend') {
+                    newCPS *= 1.5;
+                }
+
+                // Illegal AI: Double CPS
+                if (state.illegalAIActive) {
+                    newCPS *= 2;
+                }
 
                 set({ cps: newCPS });
             },

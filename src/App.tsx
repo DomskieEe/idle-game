@@ -1,4 +1,4 @@
-import { Terminal, Briefcase, Zap, X, Monitor, Trophy } from 'lucide-react';
+import { Briefcase, FileCode, Monitor, Trophy, Zap, Terminal, X, Skull } from 'lucide-react';
 import { useGameLoop } from './hooks/useGameLoop';
 import { useGameStore } from './store/useGameStore';
 import { CodeTyper } from './components/CodeTyper';
@@ -12,17 +12,19 @@ import { BurnoutBar } from './components/BurnoutBar';
 import { useState, useEffect } from 'react';
 import { clsx } from 'clsx';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FileCode } from 'lucide-react';
 
 import { PrestigeModal } from './components/PrestigeModal';
 import { ContractList } from './components/ContractList';
 
 import { IntroScreen } from './components/IntroScreen';
+import { OfficeDashboard } from './components/OfficeDashboard';
+import { SkillTree } from './components/SkillTree';
+import { DarkWebMarket } from './components/DarkWebMarket';
 
 function App() {
   useGameLoop(); // Start logic
-  const { linesOfCode, cps, lastSaveTime, addCode, shares, resetGame, hasSeenIntro } = useGameStore();
-  const [activeTab, setActiveTab] = useState<'buildings' | 'upgrades' | 'achievements' | 'hardware' | 'contracts'>('buildings');
+  const { linesOfCode, cps, lastSaveTime, addCode, shares, resetGame, hasSeenIntro, darkWebUnlocked } = useGameStore();
+  const [activeTab, setActiveTab] = useState<'buildings' | 'upgrades' | 'achievements' | 'hardware' | 'contracts' | 'skills' | 'darkweb'>('buildings');
   const [offlineEarnings, setOfflineEarnings] = useState<number | null>(null);
   const [isPrestigeOpen, setIsPrestigeOpen] = useState(false);
   const [resetConfirmation, setResetConfirmation] = useState(false);
@@ -118,6 +120,7 @@ function App() {
 
         {/* Left: Actions */}
         <section className="lg:col-span-5 flex flex-col gap-6">
+          <OfficeDashboard />
           <BurnoutBar />
           <CodeTyper />
 
@@ -198,11 +201,11 @@ function App() {
         {/* Right: Shop Tabs */}
         <section className="lg:col-span-7 glass-panel rounded-3xl p-2 h-fit">
           {/* Tab Headers */}
-          <div className="flex p-2 gap-1 bg-black/20 rounded-2xl mb-4">
+          <div className="flex p-2 gap-1 bg-black/20 rounded-2xl mb-4 overflow-x-auto flex-nowrap scrollbar-thin">
             <button
               onClick={() => setActiveTab('buildings')}
               className={clsx(
-                "flex-1 py-3 px-2 rounded-xl font-bold transition-all flex items-center justify-center gap-2 text-xs uppercase tracking-wider",
+                "flex-shrink-0 flex-1 py-3 px-4 rounded-xl font-bold transition-all flex items-center justify-center gap-2 text-xs uppercase tracking-wider",
                 activeTab === 'buildings' ? "bg-primary text-white shadow-lg glow-primary" : "text-text-muted hover:text-white hover:bg-white/5"
               )}
             >
@@ -211,7 +214,7 @@ function App() {
             <button
               onClick={() => setActiveTab('contracts')}
               className={clsx(
-                "flex-1 py-3 px-2 rounded-xl font-bold transition-all flex items-center justify-center gap-2 text-xs uppercase tracking-wider",
+                "flex-shrink-0 flex-1 py-3 px-4 rounded-xl font-bold transition-all flex items-center justify-center gap-2 text-xs uppercase tracking-wider",
                 activeTab === 'contracts' ? "bg-accent-cyan text-white shadow-lg shadow-accent-cyan/20" : "text-text-muted hover:text-white hover:bg-white/5"
               )}
             >
@@ -220,7 +223,7 @@ function App() {
             <button
               onClick={() => setActiveTab('hardware')}
               className={clsx(
-                "flex-1 py-3 px-2 rounded-xl font-bold transition-all flex items-center justify-center gap-2 text-xs uppercase tracking-wider",
+                "flex-shrink-0 flex-1 py-3 px-4 rounded-xl font-bold transition-all flex items-center justify-center gap-2 text-xs uppercase tracking-wider",
                 activeTab === 'hardware' ? "bg-accent-purple text-white shadow-lg shadow-accent-purple/20" : "text-text-muted hover:text-white hover:bg-white/5"
               )}
             >
@@ -229,16 +232,36 @@ function App() {
             <button
               onClick={() => setActiveTab('upgrades')}
               className={clsx(
-                "flex-1 py-3 px-2 rounded-xl font-bold transition-all flex items-center justify-center gap-2 text-xs uppercase tracking-wider",
-                activeTab === 'upgrades' ? "bg-accent-pink text-white shadow-lg shadow-accent-pink/20" : "text-text-muted hover:text-white hover:bg-white/5"
+                "flex-shrink-0 flex-1 py-3 px-4 rounded-xl font-bold transition-all flex items-center justify-center gap-2 text-xs uppercase tracking-wider",
+                activeTab === 'upgrades' ? "bg-primary text-white shadow-lg" : "text-text-muted hover:text-white hover:bg-white/5"
               )}
             >
-              <Zap size={14} /> <span>Upgrades</span>
+              <Zap size={14} /> <span>Shop</span>
             </button>
+            <button
+              onClick={() => setActiveTab('skills')}
+              className={clsx(
+                "flex-shrink-0 flex-1 py-3 px-4 rounded-xl font-bold transition-all flex items-center justify-center gap-2 text-xs uppercase tracking-wider",
+                activeTab === 'skills' ? "bg-secondary text-white shadow-lg border border-white/10" : "text-text-muted hover:text-white hover:bg-white/5"
+              )}
+            >
+              <Terminal size={14} /> <span>Skills</span>
+            </button>
+            {darkWebUnlocked && (
+              <button
+                onClick={() => setActiveTab('darkweb')}
+                className={clsx(
+                  "flex-shrink-0 flex-1 py-3 px-4 rounded-xl font-bold transition-all flex items-center justify-center gap-2 text-xs uppercase tracking-wider",
+                  activeTab === 'darkweb' ? "bg-red-950 text-red-500 shadow-lg border border-red-500/30" : "text-red-500/50 hover:text-red-500 hover:bg-red-500/5"
+                )}
+              >
+                <Skull size={14} /> <span>Dark</span>
+              </button>
+            )}
             <button
               onClick={() => setActiveTab('achievements')}
               className={clsx(
-                "flex-1 py-3 px-2 rounded-xl font-bold transition-all flex items-center justify-center gap-2 text-xs uppercase tracking-wider",
+                "flex-shrink-0 flex-1 py-3 px-4 rounded-xl font-bold transition-all flex items-center justify-center gap-2 text-xs uppercase tracking-wider",
                 activeTab === 'achievements' ? "bg-yellow-500 text-white shadow-lg shadow-yellow-500/20" : "text-text-muted hover:text-white hover:bg-white/5"
               )}
             >
@@ -252,6 +275,16 @@ function App() {
             {activeTab === 'contracts' && <ContractList />}
             {activeTab === 'hardware' && <HardwareShop />}
             {activeTab === 'upgrades' && <UpgradeList />}
+            {activeTab === 'skills' && (
+              <div className="p-4">
+                <SkillTree />
+              </div>
+            )}
+            {activeTab === 'darkweb' && (
+              <div className="p-4">
+                <DarkWebMarket />
+              </div>
+            )}
             {activeTab === 'achievements' && <AchievementList />}
           </div>
         </section>

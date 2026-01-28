@@ -24,6 +24,14 @@
   .text-glow {
     text-shadow: 0 0 10px currentColor;
   }
+
+  .scrollbar-thin::-webkit-scrollbar {
+    height: 4px;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    @apply bg-white/5 rounded-full hover:bg-white/10;
+  }
 }
 
 /* Custom Scrollbar */
