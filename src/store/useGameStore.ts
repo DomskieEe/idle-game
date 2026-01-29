@@ -5,6 +5,7 @@ import { UPGRADES } from '../data/upgrades';
 import { ACHIEVEMENTS } from '../data/achievements';
 import { HARDWARE } from '../data/hardware';
 import { type Contract, generateContract } from '../data/contracts';
+import { STOCKS } from '../data/stocks';
 
 interface GameState {
     linesOfCode: number;
@@ -27,6 +28,18 @@ interface GameState {
     burnout: number; // 0 to 100
     isBurnout: boolean;
 
+    // Technical Debt System
+    techDebt: number; // Accumulated debt
+    takeShortcut: () => void;
+    payDownDebt: (amount: number) => void;
+
+    // Stock Market
+    stockPrices: Record<string, number>; // id -> current price
+    ownedStocks: Record<string, number>; // id -> count owned
+    buyStock: (stockId: string, amount: number) => void;
+    sellStock: (stockId: string, amount: number) => void;
+    updateMarket: () => void;
+
     // Statistics
     startTime: number;
     totalLinesOfCode: number;
@@ -36,7 +49,8 @@ interface GameState {
     hasSeenIntro: boolean;
 
     // Advanced Systems
-    specialization: 'none' | 'frontend' | 'backend' | 'devops';
+    specialization: 'none' | 'frontend' | 'backend' | 'devops' | 'fullstack';
+    skillsUnlocked: string[];
     officeLevel: number;
     darkWebUnlocked: boolean;
     illegalAIActive: boolean;
@@ -53,7 +67,8 @@ interface GameState {
     resetGame: () => void;
 
     // Advanced Actions
-    setSpecialization: (spec: 'frontend' | 'backend' | 'devops') => void;
+    setSpecialization: (spec: 'none' | 'frontend' | 'backend' | 'devops' | 'fullstack') => void;
+    unlockSkill: (skillId: string) => void;
     upgradeOffice: () => void;
     toggleIllegalAI: (active: boolean) => void;
 
@@ -80,12 +95,16 @@ export const useGameStore = create<GameState>()(
             shares: 0,
             burnout: 0,
             isBurnout: false,
+            techDebt: 0,
+            stockPrices: STOCKS.reduce((acc, s) => ({ ...acc, [s.id]: s.basePrice }), {}),
+            ownedStocks: {},
             activeContractId: null,
             contractProgress: 0,
             contractsCompleted: 0,
             availableContracts: [],
             hasSeenIntro: false,
             specialization: 'none',
+            skillsUnlocked: [],
             officeLevel: 0,
             darkWebUnlocked: false,
             illegalAIActive: false,
@@ -104,6 +123,18 @@ export const useGameStore = create<GameState>()(
                 get().recalculateCPS(get().buildings, get().upgrades);
             },
 
+            unlockSkill: (skillId) => {
+                const state = get();
+                if (state.skillsUnlocked.includes(skillId)) return;
+
+                // Cost Logic handled in UI, but we could add verification here
+                set({
+                    skillsUnlocked: [...state.skillsUnlocked, skillId],
+                    linesOfCode: state.linesOfCode - 0 // Assumed handled before call, or add cost arg
+                });
+                get().recalculateCPS(state.buildings, state.upgrades);
+            },
+
             upgradeOffice: () => {
                 const state = get();
                 const costs = [50000, 500000, 5000000];
@@ -119,6 +150,86 @@ export const useGameStore = create<GameState>()(
 
             toggleIllegalAI: (active) => {
                 set({ illegalAIActive: active });
+            },
+
+            takeShortcut: () => {
+                const state = get();
+                const gain = state.cps * 60; // 1 minute of production instantly
+                const penalty = gain * 1.5; // Debt is 1.5x the gain
+
+                set({
+                    linesOfCode: state.linesOfCode + gain,
+                    techDebt: state.techDebt + penalty
+                });
+                get().recalculateCPS(state.buildings, state.upgrades);
+            },
+
+            payDownDebt: (amount) => {
+                const state = get();
+                const actualPay = Math.min(amount, state.techDebt, state.linesOfCode);
+
+                set({
+                    linesOfCode: state.linesOfCode - actualPay,
+                    techDebt: state.techDebt - actualPay
+                });
+                get().recalculateCPS(state.buildings, state.upgrades);
+            },
+
+            buyStock: (stockId, amount) => {
+                const state = get();
+                const currentPrice = state.stockPrices[stockId];
+                const cost = currentPrice * amount; // Cost is in SHARES
+
+                if (state.shares >= cost) {
+                    set({
+                        shares: state.shares - cost,
+                        ownedStocks: {
+                            ...state.ownedStocks,
+                            [stockId]: (state.ownedStocks[stockId] || 0) + amount
+                        }
+                    });
+                }
+            },
+
+            sellStock: (stockId, amount) => {
+                const state = get();
+                const owned = state.ownedStocks[stockId] || 0;
+
+                if (owned >= amount) {
+                    const currentPrice = state.stockPrices[stockId];
+                    const revenue = currentPrice * amount; // Revenue is in SHARES
+
+                    set({
+                        shares: state.shares + revenue,
+                        ownedStocks: {
+                            ...state.ownedStocks,
+                            [stockId]: owned - amount
+                        }
+                    });
+                }
+            },
+
+            updateMarket: () => {
+                const state = get();
+                // Random Walk Logic
+                const newPrices = { ...state.stockPrices };
+
+                STOCKS.forEach(stock => {
+                    const current = newPrices[stock.id] || stock.basePrice;
+                    const volatility = stock.volatility;
+                    const changePct = (Math.random() * volatility * 2) - volatility; // -vol to +vol
+
+                    // drift slightly up generally over time (bullish bias)
+                    const drift = 0.001;
+
+                    let newPrice = current * (1 + changePct + drift);
+                    // Clamp prices
+                    newPrice = Math.max(1, Math.min(newPrice, stock.basePrice * 10)); // Min 1, Max 10x base
+
+                    newPrices[stock.id] = newPrice;
+                });
+
+                set({ stockPrices: newPrices });
             },
 
 
@@ -171,8 +282,12 @@ export const useGameStore = create<GameState>()(
                 set((state) => {
                     let clickAmount = amount;
                     // Frontend Ninja: Double Click Power
-                    if (fromClick && state.specialization === 'frontend') {
+                    if (fromClick && (state.specialization === 'frontend' || state.specialization === 'fullstack')) {
                         clickAmount *= 2;
+                    }
+
+                    if (fromClick && state.skillsUnlocked.includes('css_wizard')) {
+                        clickAmount *= 1.5;
                     }
 
                     const newLines = state.linesOfCode + clickAmount;
@@ -362,14 +477,30 @@ export const useGameStore = create<GameState>()(
                 const prestigeMultiplier = 1 + ((state.shares || 0) * 0.1);
                 newCPS *= globalMultiplier * prestigeMultiplier;
 
-                // Backend Architect: +50% CPS
-                if (state.specialization === 'backend') {
+                // Specialization Bonuses
+                if (state.specialization === 'backend' || state.specialization === 'fullstack') {
                     newCPS *= 1.5;
                 }
+
+                // Sub-skill Bonuses
+                if (state.skillsUnlocked.includes('react_master')) globalMultiplier *= 1.2;
+                if (state.skillsUnlocked.includes('cloud_architect')) globalMultiplier *= 1.3;
+                if (state.skillsUnlocked.includes('kubernetes_god')) globalMultiplier *= 1.5;
 
                 // Illegal AI: Double CPS
                 if (state.illegalAIActive) {
                     newCPS *= 2;
+                }
+
+                // Tech Debt Penalty
+                // Penalty scales with debt relative to production capacity (base income)
+                // If debt > 10 mins of CPS, penalty starts kicking in hard
+                const debtImpact = state.cps > 0 ? state.techDebt / (state.cps * 600) : 0; // Ratio to 10 mins production
+                // Cap penalty at 75% reduction
+                const penaltyMultiplier = Math.max(0.25, 1 - (debtImpact * 0.5));
+
+                if (state.techDebt > 0) {
+                    newCPS *= penaltyMultiplier;
                 }
 
                 set({ cps: newCPS });
@@ -394,6 +525,9 @@ export const useGameStore = create<GameState>()(
                     hardware: [], // Reset Hardware
                     burnout: 0,
                     isBurnout: false,
+                    techDebt: 0,
+                    stockPrices: STOCKS.reduce((acc, s) => ({ ...acc, [s.id]: s.basePrice }), {}),
+                    ownedStocks: {},
                     activeContractId: null,
                     contractProgress: 0,
                     // Keep achievements, lifetime stats, and completed contracts

@@ -1,4 +1,4 @@
-import { Briefcase, FileCode, Monitor, Trophy, Zap, Terminal, X, Skull } from 'lucide-react';
+import { Briefcase, FileCode, Monitor, Trophy, Zap, Terminal, X, Skull, Activity } from 'lucide-react';
 import { useGameLoop } from './hooks/useGameLoop';
 import { useGameStore } from './store/useGameStore';
 import { CodeTyper } from './components/CodeTyper';
@@ -12,6 +12,7 @@ import { BurnoutBar } from './components/BurnoutBar';
 import { useState, useEffect } from 'react';
 import { clsx } from 'clsx';
 import { motion, AnimatePresence } from 'framer-motion';
+import { TechDebtIndicator } from './components/TechDebtIndicator';
 
 import { PrestigeModal } from './components/PrestigeModal';
 import { ContractList } from './components/ContractList';
@@ -20,11 +21,12 @@ import { IntroScreen } from './components/IntroScreen';
 import { OfficeDashboard } from './components/OfficeDashboard';
 import { SkillTree } from './components/SkillTree';
 import { DarkWebMarket } from './components/DarkWebMarket';
+import { StocksTab } from './components/StocksTab';
 
 function App() {
   useGameLoop(); // Start logic
   const { linesOfCode, cps, lastSaveTime, addCode, shares, resetGame, hasSeenIntro, darkWebUnlocked } = useGameStore();
-  const [activeTab, setActiveTab] = useState<'buildings' | 'upgrades' | 'achievements' | 'hardware' | 'contracts' | 'skills' | 'darkweb'>('buildings');
+  const [activeTab, setActiveTab] = useState<'buildings' | 'upgrades' | 'achievements' | 'hardware' | 'contracts' | 'skills' | 'darkweb' | 'stocks'>('buildings');
   const [offlineEarnings, setOfflineEarnings] = useState<number | null>(null);
   const [isPrestigeOpen, setIsPrestigeOpen] = useState(false);
   const [resetConfirmation, setResetConfirmation] = useState(false);
@@ -122,6 +124,7 @@ function App() {
         <section className="lg:col-span-5 flex flex-col gap-6">
           <OfficeDashboard />
           <BurnoutBar />
+          <TechDebtIndicator />
           <CodeTyper />
 
           <div className="glass-panel rounded-2xl p-6">
@@ -220,6 +223,17 @@ function App() {
             >
               <FileCode size={14} /> <span>Contracts</span>
             </button>
+            {shares > 0 && (
+              <button
+                onClick={() => setActiveTab('stocks')}
+                className={clsx(
+                  "flex-shrink-0 flex-1 py-3 px-4 rounded-xl font-bold transition-all flex items-center justify-center gap-2 text-xs uppercase tracking-wider",
+                  activeTab === 'stocks' ? "bg-blue-600 text-white shadow-lg shadow-blue-600/20" : "text-text-muted hover:text-white hover:bg-white/5"
+                )}
+              >
+                <Activity size={14} /> <span>Stocks</span>
+              </button>
+            )}
             <button
               onClick={() => setActiveTab('hardware')}
               className={clsx(
@@ -273,6 +287,7 @@ function App() {
           <div className="min-h-[400px]">
             {activeTab === 'buildings' && <BuildingList />}
             {activeTab === 'contracts' && <ContractList />}
+            {activeTab === 'stocks' && <div className="p-4"><StocksTab /></div>}
             {activeTab === 'hardware' && <HardwareShop />}
             {activeTab === 'upgrades' && <UpgradeList />}
             {activeTab === 'skills' && (
