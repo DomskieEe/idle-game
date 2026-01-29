@@ -11,9 +11,9 @@ export function PrestigeModal({ isOpen, onClose }: Props) {
     const { totalLinesOfCode, shares, prestige } = useGameStore();
 
     const totalPotentialShares = Math.floor(Math.sqrt(totalLinesOfCode / 1000000));
-    const pendingShares = Math.max(0, totalPotentialShares - shares);
-    const currentBonus = (shares * 10).toFixed(0);
-    const nextBonus = ((shares + pendingShares) * 10).toFixed(0);
+    const pendingShares = Math.max(0, totalPotentialShares - Math.floor(shares));
+    const currentBonus = (Math.floor(shares) * 10).toLocaleString();
+    const nextBonus = ((Math.floor(shares) + pendingShares) * 10).toLocaleString();
 
     const handlePrestige = () => {
         if (pendingShares > 0) {
@@ -54,12 +54,12 @@ export function PrestigeModal({ isOpen, onClose }: Props) {
                                 <div className="grid grid-cols-2 gap-4 mb-6">
                                     <div className="bg-black/30 p-4 rounded-xl border border-secondary/50">
                                         <div className="text-sm text-muted">Current Shares</div>
-                                        <div className="text-2xl font-bold text-yellow-500">{shares}</div>
+                                        <div className="text-2xl font-bold text-yellow-500">{Math.floor(shares).toLocaleString()}</div>
                                         <div className="text-xs text-green-400">+{currentBonus}% Bonus</div>
                                     </div>
                                     <div className="bg-yellow-500/20 p-4 rounded-xl border border-yellow-500">
                                         <div className="text-sm text-yellow-200">Pending Shares</div>
-                                        <div className="text-2xl font-bold text-white">+{pendingShares}</div>
+                                        <div className="text-2xl font-bold text-white">+{pendingShares.toLocaleString()}</div>
                                         <div className="text-xs text-yellow-200">New Bonus: +{nextBonus}%</div>
                                     </div>
                                 </div>
