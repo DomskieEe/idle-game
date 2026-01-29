@@ -1,22 +1,35 @@
 import { useGameStore } from '../store/useGameStore';
-import { CONTRACTS } from '../data/contracts';
-import { BUILDINGS } from '../data/buildings';
-import { CheckCircle2, ClipboardList, XCircle, Trophy } from 'lucide-react';
+import { CheckCircle2, ClipboardList, XCircle } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { clsx } from 'clsx';
+import { useEffect } from 'react';
 
 export function ContractList() {
     const {
-        buildings,
         activeContractId,
         contractProgress,
+        availableContracts,
         contractsCompleted,
         acceptContract,
         cancelContract,
-        completeContract
+        completeContract,
+        generateDailyContracts
     } = useGameStore();
 
-    const activeContract = CONTRACTS.find(c => c.id === activeContractId);
+    useEffect(() => {
+        if (availableContracts.length === 0) {
+            generateDailyContracts();
+        }
+    }, [availableContracts.length, generateDailyContracts]);
+
+    const activeContract = availableContracts.find(c => c.id === activeContractId);
+
+    // Migration Fix: If we have an ID but no contract object (legacy save), reset it
+    useEffect(() => {
+        if (activeContractId && !activeContract && availableContracts.length > 0) {
+            cancelContract();
+        }
+    }, [activeContractId, activeContract, availableContracts, cancelContract]);
 
     return (
         <div className="space-y-8">
@@ -30,6 +43,9 @@ export function ContractList() {
                         <p className="text-[10px] text-text-muted uppercase tracking-widest font-bold">Open Bounties</p>
                     </div>
                 </div>
+                <div className="text-[10px] font-bold text-accent-cyan/50 uppercase tracking-widest">
+                    Completed: {contractsCompleted}
+                </div>
             </div>
 
             {/* Active Contract Info */}
@@ -40,7 +56,18 @@ export function ContractList() {
                         <div className="flex justify-between items-start mb-4">
                             <div>
                                 <h3 className="text-xl font-bold text-white tracking-tight">{activeContract.name}</h3>
-                                <p className="text-xs text-text-muted mt-1">{activeContract.description}</p>
+                                <div className="flex items-center gap-2 mt-1">
+                                    <span className={clsx(
+                                        "text-[8px] font-black uppercase tracking-[0.2em] px-2 py-0.5 rounded-sm border",
+                                        activeContract.rarity === 'Common' && "border-white/10 text-text-muted",
+                                        activeContract.rarity === 'Uncommon' && "border-green-500/30 text-green-500",
+                                        activeContract.rarity === 'Rare' && "border-blue-500/30 text-blue-500",
+                                        activeContract.rarity === 'Mythic' && "border-purple-500/30 text-purple-500"
+                                    )}>
+                                        {activeContract.rarity}
+                                    </span>
+                                    <p className="text-xs text-text-muted">{activeContract.description}</p>
+                                </div>
                             </div>
                             <button
                                 onClick={cancelContract}
@@ -86,95 +113,64 @@ export function ContractList() {
 
             {/* List of Available Contracts */}
             <div className="grid gap-4">
-                {CONTRACTS.map(contract => {
-                    const isCompleted = contractsCompleted.includes(contract.id);
-                    const isActive = activeContractId === contract.id;
-                    const meetsRequirements = contract.requirements.every(req =>
-                        (buildings[req.buildingId] || 0) >= req.count
-                    );
-                    const isLocked = !meetsRequirements && !isCompleted;
-
-                    return (
-                        <div
-                            key={contract.id}
-                            className={clsx(
-                                "group glass-card p-5 rounded-2xl relative overflow-hidden",
-                                isActive ? "border-accent-cyan/50 bg-accent-cyan/5 shadow-[inset_0_0_20px_rgba(6,182,212,0.05)]" :
-                                    isCompleted ? "border-green-500/20 opacity-60" :
-                                        isLocked ? "opacity-40 grayscale" : ""
-                            )}
-                        >
-                            <div className="flex justify-between items-start mb-4">
-                                <div className="space-y-1">
-                                    <div className="flex items-center gap-2">
-                                        <h4 className="font-bold text-white text-sm tracking-tight">{contract.name}</h4>
-                                        {isCompleted && <Trophy size={14} className="text-yellow-500" />}
+                {availableContracts
+                    .filter(c => c.id !== activeContractId)
+                    .map(contract => {
+                        return (
+                            <div
+                                key={contract.id}
+                                className={clsx(
+                                    "group glass-card p-5 rounded-2xl relative overflow-hidden",
+                                    "hover:border-accent-cyan/30 transition-all border-white/5"
+                                )}
+                            >
+                                <div className="flex justify-between items-start mb-4">
+                                    <div className="space-y-1">
+                                        <div className="flex items-center gap-2">
+                                            <h4 className="font-bold text-white text-sm tracking-tight">{contract.name}</h4>
+                                        </div>
+                                        <div className="flex gap-2">
+                                            <span className={clsx(
+                                                "text-[8px] font-black uppercase tracking-[0.2em] px-2 py-0.5 rounded-sm border",
+                                                contract.difficulty === 'Easy' && "border-green-500/30 text-green-500 bg-green-500/5",
+                                                contract.difficulty === 'Medium' && "border-yellow-500/30 text-yellow-500 bg-yellow-500/5",
+                                                contract.difficulty === 'Hard' && "border-orange-500/30 text-orange-500 bg-orange-500/5",
+                                                contract.difficulty === 'Legendary' && "border-red-500/30 text-red-500 bg-red-500/5"
+                                            )}>
+                                                {contract.difficulty}
+                                            </span>
+                                            <span className={clsx(
+                                                "text-[8px] font-black uppercase tracking-[0.2em] px-2 py-0.5 rounded-sm border",
+                                                contract.rarity === 'Common' && "border-white/10 text-text-muted",
+                                                contract.rarity === 'Uncommon' && "border-green-500/30 text-green-500",
+                                                contract.rarity === 'Rare' && "border-blue-500/30 text-blue-500",
+                                                contract.rarity === 'Mythic' && "border-purple-500/30 text-purple-500"
+                                            )}>
+                                                {contract.rarity}
+                                            </span>
+                                        </div>
                                     </div>
-                                    <span className={clsx(
-                                        "text-[8px] font-black uppercase tracking-[0.2em] px-2 py-0.5 rounded-sm border",
-                                        contract.difficulty === 'Easy' && "border-green-500/30 text-green-500 bg-green-500/5",
-                                        contract.difficulty === 'Medium' && "border-yellow-500/30 text-yellow-500 bg-yellow-500/5",
-                                        contract.difficulty === 'Hard' && "border-orange-500/30 text-orange-500 bg-orange-500/5",
-                                        contract.difficulty === 'Legendary' && "border-red-500/30 text-red-500 bg-red-500/5"
-                                    )}>
-                                        {contract.difficulty}
-                                    </span>
+                                    <div className="text-right">
+                                        <div className="text-xs text-white font-black font-mono">+{contract.rewardLOC.toLocaleString()} <span className="text-[10px] text-text-muted font-sans font-bold">LOC</span></div>
+                                        {contract.rewardShares && <div className="text-[10px] text-yellow-500 font-bold uppercase tracking-tighter">+{contract.rewardShares} Shares</div>}
+                                    </div>
                                 </div>
-                                <div className="text-right">
-                                    <div className="text-xs text-white font-black font-mono">+{contract.rewardLOC.toLocaleString()} <span className="text-[10px] text-text-muted font-sans font-bold">LOC</span></div>
-                                    {contract.rewardShares && <div className="text-[10px] text-yellow-500 font-bold uppercase tracking-tighter">+{contract.rewardShares} Shares</div>}
-                                </div>
-                            </div>
 
-                            {/* Requirements */}
-                            <div className="flex flex-wrap gap-1.5 mt-auto">
-                                {contract.requirements.map(req => {
-                                    const buildingName = BUILDINGS.find(b => b.id === req.buildingId)?.name || req.buildingId;
-                                    const hasRequirement = (buildings[req.buildingId] || 0) >= req.count;
-                                    return (
-                                        <span
-                                            key={req.buildingId}
-                                            className={clsx(
-                                                "text-[9px] px-2 py-1 rounded-md border flex items-center gap-1.5 font-bold uppercase tracking-tight",
-                                                hasRequirement ? "border-white/10 text-white/60 bg-white/5" : "border-red-500/20 text-red-400 bg-red-500/5"
-                                            )}
-                                        >
-                                            <div className={clsx("w-1 h-1 rounded-full", hasRequirement ? "bg-green-500" : "bg-red-500")} />
-                                            {req.count}x {buildingName}
-                                        </span>
-                                    );
-                                })}
-                            </div>
-
-                            {!isActive && !isCompleted && (
                                 <button
                                     onClick={() => acceptContract(contract.id)}
-                                    disabled={!meetsRequirements || !!activeContractId}
+                                    disabled={!!activeContractId}
                                     className={clsx(
                                         "w-full mt-4 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
-                                        !activeContractId && meetsRequirements
+                                        !activeContractId
                                             ? "bg-white/5 hover:bg-white/10 text-white border border-white/10 active:scale-95"
                                             : "bg-black/20 text-text-muted cursor-not-allowed opacity-50"
                                     )}
                                 >
-                                    {!!activeContractId ? "Active Project Exists" : meetsRequirements ? "Initiate Project" : "Access Restricted"}
+                                    {!!activeContractId ? "Finish Active Project First" : "Initiate Project"}
                                 </button>
-                            )}
-
-                            {isActive && (
-                                <div className="mt-4 text-center text-[10px] font-black uppercase tracking-widest text-accent-cyan bg-accent-cyan/10 py-3 rounded-xl border border-accent-cyan/20 animate-pulse">
-                                    Operational
-                                </div>
-                            )}
-
-                            {isCompleted && (
-                                <div className="mt-4 text-center text-[10px] font-black uppercase tracking-widest text-green-500 bg-green-500/10 py-3 rounded-xl border border-green-500/20">
-                                    Project Archived
-                                </div>
-                            )}
-                        </div>
-                    );
-                })}
+                            </div>
+                        );
+                    })}
             </div>
         </div>
     );

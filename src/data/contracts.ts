@@ -10,63 +10,71 @@ export interface Contract {
     rewardLOC: number;
     rewardShares?: number;
     difficulty: 'Easy' | 'Medium' | 'Hard' | 'Legendary';
+    rarity: 'Common' | 'Uncommon' | 'Rare' | 'Mythic';
 }
 
-export const CONTRACTS: Contract[] = [
-    {
-        id: 'fix_css_bugs',
-        name: 'Fix CSS Layouts',
-        description: 'A local bakery needs their website fixed. It is mostly alignment issues.',
-        locRequired: 500,
-        requirements: [],
-        rewardLOC: 2000,
-        difficulty: 'Easy'
-    },
-    {
-        id: 'simple_landing_page',
-        name: 'Startup Landing Page',
-        description: 'Build a high-conversion landing page for a new AI toothbrush startup.',
-        locRequired: 2500,
-        requirements: [
-            { buildingId: 'intern', count: 1 }
-        ],
-        rewardLOC: 10000,
-        difficulty: 'Easy'
-    },
-    {
-        id: 'ecommerce_backend',
-        name: 'E-commerce API',
-        description: 'Develop a robust backend for a niche sneaker store.',
-        locRequired: 15000,
-        requirements: [
-            { buildingId: 'junior_dev', count: 2 }
-        ],
-        rewardLOC: 50000,
-        difficulty: 'Medium'
-    },
-    {
-        id: 'fintech_app',
-        name: 'Fintech Mobile App',
-        description: 'Create a secure payment processing app. Security is paramount.',
-        locRequired: 100000,
-        requirements: [
-            { buildingId: 'senior_dev', count: 1 },
-            { buildingId: 'junior_dev', count: 3 }
-        ],
-        rewardLOC: 350000,
-        difficulty: 'Hard'
-    },
-    {
-        id: 'global_social_network',
-        name: 'Social Network MVP',
-        description: 'The next big thing. Scalability is the main challenge.',
-        locRequired: 1000000,
-        requirements: [
-            { buildingId: 'ai_copilot', count: 1 },
-            { buildingId: 'senior_dev', count: 5 }
-        ],
-        rewardLOC: 5000000,
-        rewardShares: 5,
-        difficulty: 'Legendary'
-    }
+const CLIENTS = [
+    'Local Bakery', 'Startup Inc', 'Fintech Corp', 'MegaBank', 'Social Media Giant',
+    'AI Research Lab', 'Crypto Exchange', 'Game Studio', 'Government Agency', 'Non-Profit'
 ];
+
+const TASKS = [
+    'Fix CSS Layouts', 'Build Landing Page', 'Optimize Database', 'Refactor Legacy Code',
+    'Implement Auth Flow', 'Design API', 'Migrate to Cloud', 'Train AI Model', 'Audit Security', 'Develop Mobile App'
+];
+
+const DESCRIPTIONS = [
+    'Needs it done yesterday.', 'Offering exposure as payment.', 'The last dev quit.',
+    'Scalability is key.', 'Must be mobile-responsive.', 'Strict NDA required.',
+    ' CEO wants to see results.', 'Budget is tight.', 'Make it pop.', 'Using bleeding edge tech.'
+];
+
+export function generateContract(playerCPS: number, playerLOC: number): Contract {
+    const isEarlyGame = playerLOC < 5000;
+    const baseDifficulty = isEarlyGame ? 100 : Math.max(500, playerCPS * 60); // At least 1 minute of work
+
+    // Random Variance (0.5x to 3x)
+    const multiplier = 0.5 + Math.random() * 2.5;
+    const locRequired = Math.floor(baseDifficulty * multiplier);
+
+    // Difficulty Rating
+    let difficulty: Contract['difficulty'] = 'Easy';
+    if (multiplier > 1.5) difficulty = 'Medium';
+    if (multiplier > 2.2) difficulty = 'Hard';
+    if (multiplier > 2.8) difficulty = 'Legendary';
+
+    // Rarity System (affects rewards)
+    let rarity: Contract['rarity'] = 'Common';
+    const roll = Math.random();
+    if (roll > 0.6) rarity = 'Uncommon';
+    if (roll > 0.85) rarity = 'Rare';
+    if (roll > 0.98) rarity = 'Mythic';
+
+    // Reward Calculation
+    let rewardMultiplier = 1.5; // Base 50% profit
+    if (rarity === 'Uncommon') rewardMultiplier = 2.0;
+    if (rarity === 'Rare') rewardMultiplier = 3.5;
+    if (rarity === 'Mythic') rewardMultiplier = 10.0;
+
+    const rewardLOC = Math.floor(locRequired * rewardMultiplier);
+
+    // Shares reward for Mythic only
+    const rewardShares = rarity === 'Mythic' ? Math.max(1, Math.floor(multiplier)) : undefined;
+
+    // Random Content
+    const client = CLIENTS[Math.floor(Math.random() * CLIENTS.length)];
+    const task = TASKS[Math.floor(Math.random() * TASKS.length)];
+    const desc = DESCRIPTIONS[Math.floor(Math.random() * DESCRIPTIONS.length)];
+
+    return {
+        id: `contract_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
+        name: `${task} for ${client}`,
+        description: `Client: ${client}. ${desc}`,
+        locRequired,
+        requirements: [], // For procedural, maybe skip building reqs to avoid soft-locking, or add simple ones later
+        rewardLOC,
+        rewardShares,
+        difficulty,
+        rarity
+    };
+}

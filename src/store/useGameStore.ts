@@ -4,7 +4,7 @@ import { BUILDINGS } from '../data/buildings';
 import { UPGRADES } from '../data/upgrades';
 import { ACHIEVEMENTS } from '../data/achievements';
 import { HARDWARE } from '../data/hardware';
-import { CONTRACTS } from '../data/contracts';
+import { type Contract, generateContract } from '../data/contracts';
 
 interface GameState {
     linesOfCode: number;
@@ -20,7 +20,8 @@ interface GameState {
     // Contracts System
     activeContractId: string | null;
     contractProgress: number; // LOC contributed to current contract
-    contractsCompleted: string[]; // ids of completed contracts
+    availableContracts: Contract[];
+    contractsCompleted: number; // count of completed contracts
 
     // Burnout System
     burnout: number; // 0 to 100
@@ -60,6 +61,7 @@ interface GameState {
     acceptContract: (contractId: string) => void;
     cancelContract: () => void;
     completeContract: () => void;
+    generateDailyContracts: () => void;
 
     // UI Actions
     setHasSeenIntro: (seen: boolean) => void;
@@ -80,7 +82,8 @@ export const useGameStore = create<GameState>()(
             isBurnout: false,
             activeContractId: null,
             contractProgress: 0,
-            contractsCompleted: [],
+            contractsCompleted: 0,
+            availableContracts: [],
             hasSeenIntro: false,
             specialization: 'none',
             officeLevel: 0,
@@ -417,7 +420,8 @@ export const useGameStore = create<GameState>()(
                     totalClicks: 0,
                     activeContractId: null,
                     contractProgress: 0,
-                    contractsCompleted: []
+                    contractsCompleted: 0,
+                    availableContracts: []
                 });
             },
 
@@ -425,7 +429,7 @@ export const useGameStore = create<GameState>()(
                 const state = get();
                 if (state.activeContractId) return; // Already have a contract
 
-                const contract = CONTRACTS.find(c => c.id === contractId);
+                const contract = state.availableContracts.find(c => c.id === contractId);
                 if (!contract) return;
 
                 // Check requirements
@@ -452,19 +456,34 @@ export const useGameStore = create<GameState>()(
                 const state = get();
                 if (!state.activeContractId) return;
 
-                const contract = CONTRACTS.find(c => c.id === state.activeContractId);
+                const contract = state.availableContracts.find(c => c.id === state.activeContractId);
                 if (!contract) return;
 
                 if (state.contractProgress >= contract.locRequired) {
+                    // Generate a replacement contract
+                    const newContract = generateContract(state.cps, state.linesOfCode);
+
                     set(state => ({
                         linesOfCode: state.linesOfCode + contract.rewardLOC,
                         shares: state.shares + (contract.rewardShares || 0),
-                        contractsCompleted: [...state.contractsCompleted, contract.id],
+                        contractsCompleted: state.contractsCompleted + 1,
                         activeContractId: null,
-                        contractProgress: 0
+                        contractProgress: 0,
+                        // Remove completed, add new one
+                        availableContracts: [...state.availableContracts.filter(c => c.id !== contract.id), newContract]
                     }));
                     get().checkAchievements();
                 }
+            },
+
+            generateDailyContracts: () => {
+                const state = get();
+                if (state.availableContracts.length > 0) return;
+
+                const newContracts = Array(3).fill(null).map(() =>
+                    generateContract(state.cps, state.linesOfCode)
+                );
+                set({ availableContracts: newContracts });
             }
         }),
         {
