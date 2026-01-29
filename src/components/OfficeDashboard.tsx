@@ -1,5 +1,6 @@
+import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Home, Building2, Building, LandPlot, Zap, Users } from 'lucide-react';
+import { Home, Building2, Building, LandPlot, Zap, Users, Activity } from 'lucide-react';
 import { useGameStore } from '../store/useGameStore';
 import { clsx } from 'clsx';
 
@@ -11,7 +12,9 @@ const OFFICE_DATA = [
 ];
 
 export function OfficeDashboard() {
-    const { officeLevel, upgradeOffice, linesOfCode, buildings } = useGameStore();
+    const { officeLevel, upgradeOffice, linesOfCode, buildings, resetGame } = useGameStore();
+    const [confirmReset, setConfirmReset] = useState(false);
+
     const currentOffice = OFFICE_DATA[officeLevel];
     const nextOffice = officeLevel < 3 ? OFFICE_DATA[officeLevel + 1] : null;
 
@@ -64,7 +67,7 @@ export function OfficeDashboard() {
 
             {/* Upgrade Button */}
             {nextOffice && (
-                <div className="relative">
+                <div className="relative mb-6">
                     <button
                         onClick={upgradeOffice}
                         disabled={!canAfford}
@@ -88,13 +91,45 @@ export function OfficeDashboard() {
                 </div>
             )}
 
-            {officeLevel === 3 && (
-                <div className="text-center py-2">
-                    <span className="text-[10px] font-black text-yellow-500 uppercase tracking-[0.3em] glow-primary">
-                        Maximum Infrastructure Scale Achieved
-                    </span>
+            {/* System Status Footer */}
+            <div className="pt-4 border-t border-white/5 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                    <div className="p-1.5 rounded-lg bg-green-500/10 text-green-500">
+                        <Activity size={12} />
+                    </div>
+                    <div>
+                        <div className="text-[9px] font-black text-white uppercase tracking-wider flex items-center gap-2">
+                            System Optimal <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
+                        </div>
+                        <div className="text-[8px] text-text-muted font-mono">Core Clock: Stable 1.0.2</div>
+                    </div>
                 </div>
-            )}
+
+                {!confirmReset ? (
+                    <button
+                        onClick={() => setConfirmReset(true)}
+                        className="text-[9px] font-black text-white/20 hover:text-red-500 uppercase tracking-widest transition-colors"
+                    >
+                        Reset System
+                    </button>
+                ) : (
+                    <div className="flex items-center gap-3">
+                        <span className="text-[9px] font-black text-red-500 uppercase animate-pulse">Confirm?</span>
+                        <button
+                            onClick={resetGame}
+                            className="text-[9px] font-black text-red-500 bg-red-500/10 px-2 py-1 rounded hover:bg-red-500/20"
+                        >
+                            YES
+                        </button>
+                        <button
+                            onClick={() => setConfirmReset(false)}
+                            className="text-[9px] font-black text-text-muted hover:text-white"
+                        >
+                            NO
+                        </button>
+                    </div>
+                )}
+            </div>
         </div>
     );
 }

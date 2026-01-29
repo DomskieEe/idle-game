@@ -25,11 +25,10 @@ import { StocksTab } from './components/StocksTab';
 
 function App() {
   useGameLoop(); // Start logic
-  const { linesOfCode, cps, lastSaveTime, addCode, shares, resetGame, hasSeenIntro, darkWebUnlocked } = useGameStore();
+  const { linesOfCode, cps, lastSaveTime, addCode, shares, hasSeenIntro, darkWebUnlocked } = useGameStore();
   const [activeTab, setActiveTab] = useState<'buildings' | 'upgrades' | 'achievements' | 'hardware' | 'contracts' | 'skills' | 'darkweb' | 'stocks'>('buildings');
   const [offlineEarnings, setOfflineEarnings] = useState<number | null>(null);
   const [isPrestigeOpen, setIsPrestigeOpen] = useState(false);
-  const [resetConfirmation, setResetConfirmation] = useState(false);
 
   useEffect(() => {
     // Check for offline progress
@@ -124,57 +123,9 @@ function App() {
         <section className="lg:col-span-5 flex flex-col gap-6">
           <OfficeDashboard />
           <BurnoutBar />
-          <TechDebtIndicator />
-          <CodeTyper />
 
-          <div className="glass-panel rounded-2xl p-6">
-            <h3 className="text-sm font-bold uppercase tracking-wider text-text-muted mb-4 flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-              Current Infrastructure
-            </h3>
-            <ul className="text-sm text-text-muted space-y-3">
-              <li className="flex justify-between items-center">
-                <span>System Status</span>
-                <span className="text-white font-medium bg-green-500/10 text-green-400 px-2 py-0.5 rounded text-[10px] uppercase">Optimal</span>
-              </li>
-              <li className="flex justify-between items-center">
-                <span>Core Clock</span>
-                <span className="text-white font-mono uppercase">Stable 1.0.2</span>
-              </li>
-            </ul>
-            <div className="mt-6 pt-4 border-t border-white/5">
-              {!resetConfirmation ? (
-                <button
-                  onClick={() => setResetConfirmation(true)}
-                  className="text-[9px] font-black uppercase tracking-[0.2em] text-red-500/50 hover:text-red-500 transition-colors flex items-center gap-2"
-                >
-                  <Zap size={10} />
-                  Emergency Reformat
-                </button>
-              ) : (
-                <div className="flex items-center justify-between">
-                  <span className="text-[9px] font-black text-red-500 uppercase animate-pulse">Confirm Purge?</span>
-                  <div className="flex gap-4">
-                    <button
-                      onClick={() => {
-                        resetGame();
-                        setResetConfirmation(false);
-                      }}
-                      className="text-[9px] font-black text-red-500 underline uppercase tracking-widest"
-                    >
-                      YES
-                    </button>
-                    <button
-                      onClick={() => setResetConfirmation(false)}
-                      className="text-[9px] font-black text-text-muted uppercase tracking-widest"
-                    >
-                      CANCEL
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
+          <CodeTyper />
+          <TechDebtIndicator />
 
           <div className="relative group">
             <div className="absolute -inset-0.5 bg-gradient-to-r from-yellow-500 to-orange-600 rounded-2xl blur opacity-20 group-hover:opacity-40 transition duration-1000 group-hover:duration-200" />
@@ -199,6 +150,9 @@ function App() {
               </button>
             </div>
           </div>
+
+
+
         </section>
 
         {/* Right: Shop Tabs */}
